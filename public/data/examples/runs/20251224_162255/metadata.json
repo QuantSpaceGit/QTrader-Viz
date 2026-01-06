@@ -1,0 +1,84 @@
+{
+  "metadata_version": "1.0",
+  "generated_at": "2025-12-24T16:23:59.765432",
+  "backtest": {
+    "backtest_id": "simple_sma_crossover",
+    "start_date": "2015-01-01T00:00:00",
+    "end_date": "2025-11-30T00:00:00",
+    "initial_equity": "100000",
+    "replay_speed": -1.0,
+    "display_events": [
+      "*"
+    ],
+    "data": {
+      "sources": [
+        {
+          "name": "yahoo-us-equity-1d-csv",
+          "universe": [
+            "AAPL"
+          ]
+        }
+      ]
+    },
+    "strategies": [
+      {
+        "strategy_id": "sma_crossover",
+        "universe": [
+          "AAPL"
+        ],
+        "data_sources": [
+          "yahoo-us-equity-1d-csv"
+        ],
+        "config": {
+          "fast_period": 20,
+          "slow_period": 50,
+          "confidence": 1.0,
+          "log_indicators": true
+        }
+      }
+    ],
+    "risk_policy": {
+      "name": "naive",
+      "config": {}
+    },
+    "strategy_adjustment_mode": "split_adjusted",
+    "portfolio_adjustment_mode": "total_return",
+    "reporting": {
+      "emit_metrics_events": true,
+      "event_frequency": 1,
+      "risk_free_rate": 0.02,
+      "max_equity_points": 10000,
+      "write_json": true,
+      "write_parquet": true,
+      "write_csv_timeline": true,
+      "include_equity_curve": true,
+      "include_returns": true,
+      "include_trades": true,
+      "include_drawdowns": true,
+      "display_final_report": true,
+      "write_html_report": true,
+      "report_detail_level": "full",
+      "benchmark_symbol": null
+    }
+  },
+  "system": {
+    "data": {
+      "sources_config": "config/data_sources.yaml",
+      "default_timezone": "America/New_York",
+      "price_decimals": 2,
+      "validate_on_load": true
+    },
+    "output": {
+      "experiments_root": "experiments",
+      "run_id_format": "%Y%m%d_%H%M%S",
+      "display_format": "line"
+    },
+    "logging": {
+      "level": "INFO",
+      "format": "console",
+      "timestamp_format": "compact",
+      "enable_file": true,
+      "file_path": "logs/qtrader.log"
+    }
+  }
+}
