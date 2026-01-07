@@ -114,7 +114,7 @@ function App() {
           <TradesTab data={processedData} />
         )}
         {activeTab === 'drawdowns' && (
-          <DrawdownsTab data={processedData} performance={run.performance} />
+          <DrawdownsTab data={processedData} />
         )}
       </main>
     </div>
