@@ -14,11 +14,12 @@ interface PriceChartProps {
 
 export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
+    const legendRef = useRef<HTMLDivElement>(null);
     const [showGrid, setShowGrid] = useState(true);
     const [crosshairMode, setCrosshairMode] = useState<'normal' | 'magnet'>('normal');
 
     useEffect(() => {
-        if (!chartContainerRef.current || data.length === 0) return;
+        if (!chartContainerRef.current || !data || data.length === 0) return;
 
         const chart = createChart(chartContainerRef.current, {
             layout: {
@@ -30,7 +31,7 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
                 horzLines: { color: showGrid ? '#2b2b43' : 'transparent' },
             },
             width: chartContainerRef.current.clientWidth,
-            height: 500,
+            height: 600,
             crosshair: {
                 mode: crosshairMode === 'magnet' ? CrosshairMode.Magnet : CrosshairMode.Normal,
                 vertLine: {
@@ -48,16 +49,16 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
                 timeVisible: true,
                 secondsVisible: false,
                 borderColor: '#2b2b43',
-                rightOffset: 12,
-                barSpacing: 8,
+                rightOffset: 20,
+                barSpacing: 3,
                 fixLeftEdge: false,
                 fixRightEdge: false,
             },
             rightPriceScale: {
                 borderColor: '#2b2b43',
                 scaleMargins: {
-                    top: 0.1,
-                    bottom: 0.2,
+                    top: 0.012,      // 1.2% margin above highest price
+                    bottom: 0.05,    // Small margin to show down to ~90% of lowest price
                 },
             },
             handleScroll: {
@@ -82,14 +83,21 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
             wickDownColor: '#f87171',
         });
 
-        // Format data
-        const candleData = data.map((bar) => ({
-            time: Math.floor(bar.timestamp.getTime() / 1000) as Time,
-            open: bar.open,
-            high: bar.high,
-            low: bar.low,
-            close: bar.close,
-        }));
+        // Format and deduplicate candlestick data
+        const candleDataMap = new Map<number, { open: number; high: number; low: number; close: number }>();
+        data.forEach((bar) => {
+            const time = Math.floor(bar.timestamp.getTime() / 1000);
+            candleDataMap.set(time, {
+                open: bar.open,
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+            });
+        });
+
+        const candleData = Array.from(candleDataMap.entries())
+            .map(([time, ohlc]) => ({ time: time as Time, ...ohlc }))
+            .sort((a, b) => (a.time as number) - (b.time as number));
 
         candlestickSeries.setData(candleData);
 
@@ -102,10 +110,16 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
                 title: indicator.name,
             });
 
-            const lineData = indicator.data.map((point) => ({
-                time: Math.floor(point.timestamp.getTime() / 1000) as Time,
-                value: point.value,
-            }));
+            // Deduplicate and sort indicator data
+            const lineDataMap = new Map<number, number>();
+            indicator.data.forEach((point) => {
+                const time = Math.floor(point.timestamp.getTime() / 1000);
+                lineDataMap.set(time, point.value);
+            });
+
+            const lineData = Array.from(lineDataMap.entries())
+                .map(([time, value]) => ({ time: time as Time, value }))
+                .sort((a, b) => (a.time as number) - (b.time as number));
 
             lineSeries.setData(lineData);
         });
@@ -129,6 +143,67 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
             createSeriesMarkers(candlestickSeries, markers);
         }
 
+        // Subscribe to crosshair move to update legend
+        chart.subscribeCrosshairMove((param) => {
+            if (!legendRef.current) return;
+
+            if (!param.time || !param.seriesData.size) {
+                legendRef.current.innerHTML = '<span style="color: #888;">Hover over chart to see values</span>';
+                return;
+            }
+
+            const candleData = param.seriesData.get(candlestickSeries) as { open: number; high: number; low: number; close: number } | undefined;
+
+            let legendHTML = '';
+
+            // OHLCV Data
+            if (candleData) {
+                const dateStr = new Date((param.time as number) * 1000).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                legendHTML += `<div style="margin-bottom: 8px; color: #fff; font-weight: 600;">${dateStr}</div>`;
+                legendHTML += `<div style="display: flex; gap: 16px; flex-wrap: wrap;">`;
+                legendHTML += `<span><strong style="color: #888;">O:</strong> ${candleData.open?.toFixed(2)}</span>`;
+                legendHTML += `<span><strong style="color: #888;">H:</strong> ${candleData.high?.toFixed(2)}</span>`;
+                legendHTML += `<span><strong style="color: #888;">L:</strong> ${candleData.low?.toFixed(2)}</span>`;
+                legendHTML += `<span><strong style="color: #888;">C:</strong> ${candleData.close?.toFixed(2)}</span>`;
+                legendHTML += `</div>`;
+            }
+
+            // Indicator values
+            if (indicators.length > 0) {
+                legendHTML += `<div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;">`;
+                indicators.forEach((indicator, index) => {
+                    const indicatorSeries = Array.from(param.seriesData.keys())[index + 1];
+                    const indicatorValue = param.seriesData.get(indicatorSeries) as { value: number } | undefined;
+                    if (indicatorValue?.value !== undefined) {
+                        const color = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'][index % 6];
+                        legendHTML += `<span><strong style="color: ${color};">${indicator.name}:</strong> ${indicatorValue.value.toFixed(2)}</span>`;
+                    }
+                });
+                legendHTML += `</div>`;
+            }
+
+            // Signal at this time
+            const currentSignal = signals.find(s =>
+                Math.floor(s.timestamp.getTime() / 1000) === param.time
+            );
+            if (currentSignal) {
+                const signalColor = (currentSignal.intention === 'BUY' || currentSignal.intention === 'OPEN_LONG') ? '#4ade80' : '#f87171';
+                legendHTML += `<div style="margin-top: 8px; padding: 4px 8px; background: rgba(${currentSignal.intention.includes('LONG') ? '74, 222, 128' : '248, 113, 113'}, 0.2); border-radius: 4px; display: inline-block;">`;
+                legendHTML += `<strong style="color: ${signalColor};">SIGNAL: ${currentSignal.intention.replace('_', ' ')}</strong>`;
+                if (currentSignal.reason) {
+                    legendHTML += ` <span style="color: #888;">(${currentSignal.reason})</span>`;
+                }
+                legendHTML += `</div>`;
+            }
+
+            legendRef.current.innerHTML = legendHTML;
+        });
+
         // Handle resize
         const handleResize = () => {
             if (chartContainerRef.current) {
@@ -146,7 +221,7 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
         };
     }, [data, signals, indicators, showGrid, crosshairMode]);
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
         return (
             <div className="chart-placeholder">
                 <p>No price data available</p>
@@ -176,6 +251,9 @@ export function PriceChart({ data, signals, indicators = [] }: PriceChartProps) 
                 <span className="chart-hint">Scroll: Zoom | Drag: Pan | Shift+Drag: Price Scale</span>
             </div>
             <div ref={chartContainerRef} className="chart-container" />
+            <div ref={legendRef} className="chart-legend">
+                <span style={{ color: '#888' }}>Hover over chart to see values</span>
+            </div>
         </div>
     );
 }
