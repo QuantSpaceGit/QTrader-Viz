@@ -2,10 +2,10 @@
  * Trades table component
  */
 
-import type { Performance } from '../lib/types/qtrader';
+import type { Trade } from '../lib/types/qtrader';
 
 interface TradesTableProps {
-    trades: Performance['trades'];
+    trades: Trade[];
 }
 
 export function TradesTable({ trades }: TradesTableProps) {
@@ -36,9 +36,8 @@ export function TradesTable({ trades }: TradesTableProps) {
                 </thead>
                 <tbody>
                     {trades.map((trade) => {
-                        const pnl = parseFloat(trade.realized_pnl);
-                        const pnlPct = parseFloat(trade.realized_pnl_pct);
-                        const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                        const pnlClass = trade.pnl >= 0 ? 'positive' : 'negative';
+                        const isOpen = !trade.exit_timestamp || trade.exit_timestamp === null;
 
                         return (
                             <tr key={trade.trade_id}>
@@ -49,13 +48,43 @@ export function TradesTable({ trades }: TradesTableProps) {
                                     </span>
                                 </td>
                                 <td>{new Date(trade.entry_timestamp).toLocaleDateString()}</td>
-                                <td>{new Date(trade.exit_timestamp).toLocaleDateString()}</td>
-                                <td>${parseFloat(trade.entry_price).toFixed(2)}</td>
-                                <td>${parseFloat(trade.exit_price).toFixed(2)}</td>
-                                <td>{parseFloat(trade.quantity).toFixed(0)}</td>
-                                <td className={pnlClass}>${pnl.toFixed(2)}</td>
-                                <td className={pnlClass}>{pnlPct.toFixed(2)}%</td>
-                                <td>{trade.duration_days} days</td>
+                                <td>
+                                    {isOpen ? (
+                                        <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>OPEN</span>
+                                    ) : (
+                                        new Date(trade.exit_timestamp).toLocaleDateString()
+                                    )}
+                                </td>
+                                <td>${trade.entry_price.toFixed(2)}</td>
+                                <td>
+                                    {isOpen ? (
+                                        <span style={{ color: '#888' }}>-</span>
+                                    ) : (
+                                        `$${trade.exit_price.toFixed(2)}`
+                                    )}
+                                </td>
+                                <td>{trade.quantity.toFixed(0)}</td>
+                                <td className={isOpen ? '' : pnlClass}>
+                                    {isOpen ? (
+                                        <span style={{ color: '#888' }}>-</span>
+                                    ) : (
+                                        `$${trade.pnl.toFixed(2)}`
+                                    )}
+                                </td>
+                                <td className={isOpen ? '' : pnlClass}>
+                                    {isOpen ? (
+                                        <span style={{ color: '#888' }}>-</span>
+                                    ) : (
+                                        `${trade.pnl_pct.toFixed(2)}%`
+                                    )}
+                                </td>
+                                <td>
+                                    {isOpen ? (
+                                        <span style={{ color: '#fbbf24' }}>In Progress</span>
+                                    ) : (
+                                        `${trade.duration_days.toFixed(0)} days`
+                                    )}
+                                </td>
                             </tr>
                         );
                     })}
