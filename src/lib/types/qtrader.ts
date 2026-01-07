@@ -104,48 +104,55 @@ export interface Performance {
     avg_trade_duration_days: string;
     total_commissions: string;
     commission_pct_of_pnl: string;
-    monthly_returns: Array<{
-        period: string;
-        period_type: string;
-        start_date: string;
-        end_date: string;
-        start_equity: string;
-        end_equity: string;
-        return_pct: string;
-        num_trades: number;
-        winning_trades: number;
-        losing_trades: number;
-    }>;
-    yearly_returns?: Array<{
-        period: string;
-        period_type: string;
-        start_date: string;
-        end_date: string;
-        start_equity: string;
-        end_equity: string;
-        return_pct: string;
-        num_trades: number;
-        winning_trades: number;
-        losing_trades: number;
-    }>;
-    trades?: Array<{
-        trade_id: string;
-        strategy_id: string;
-        symbol: string;
-        side: string;
-        entry_timestamp: string;
-        exit_timestamp: string;
-        entry_price: string;
-        exit_price: string;
-        quantity: string;
-        realized_pnl: string;
-        realized_pnl_pct: string;
-        duration_days: number;
-        commission: string;
-    }>;
+    monthly_returns: MonthlyReturn[];
+    yearly_returns?: YearlyReturn[];
 }
 
-export interface TimelineRow {
+export interface MonthlyReturn {
+    period: string;
+    period_type: string;
+    start_date: string;
+    end_date: string;
+    start_equity: string;
+    end_equity: string;
+    return_pct: string;
+    num_trades: number;
+    winning_trades: number;
+    losing_trades: number;
+}
+
+export interface YearlyReturn {
+    period: string;
+    period_type: string;
+    start_date: string;
+    end_date: string;
+    start_equity: string;
+    end_equity: string;
+    return_pct: string;
+    num_trades: number;
+    winning_trades: number;
+    losing_trades: number;
+}
+
+export interface Trade {
+    trade_id: string;
+    strategy_id: string;
+    symbol: string;
+    side: string;
+    entry_timestamp: string;
+    exit_timestamp: string;
+    entry_price: number;
+    exit_price: number;
+    quantity: number;
+    pnl: number;
+    pnl_pct: number;
+    commission: number;
+    duration_seconds: number;
+    duration_days: number;
+    is_winner: boolean;
+}
+
+export interface ChartDataRow {
     timestamp: string;
     strategy_id: string;
     ticker: string;
@@ -176,26 +183,46 @@ export interface TimelineRow {
     fill_side: string | null;
     fill_qty: number | null;
     fill_price: number | null;
-    fill_slippage_bps: number | null;
+    fill_slippage_bps?: number | null;
     fill_timestamp: string | null;
-    commission: number | null;
+    commission?: number | null;
     fill_event_id: string | null;
     fill_correlation_id: string | null;
     fill_causation_id: string | null;
     fill_source_service: string | null;
-    trade_id: string | null;
-    trade_status: string | null;
-    trade_side: string | null;
-    trade_entry_price: number | null;
-    trade_exit_price: number | null;
-    trade_realized_pnl: number | null;
+    trade_id?: string | null;
+    trade_status?: string | null;
+    trade_side?: string | null;
+    trade_entry_price?: number | null;
+    trade_exit_price?: number | null;
+    trade_realized_pnl?: number | null;
+}
+
+export interface EquityCurvePoint {
+    timestamp: string;
+    equity: number;
+    cash: number;
+    positions_value: number;
+}
+
+export interface Drawdown {
+    drawdown_id: number;
+    start_timestamp: string;
+    trough_timestamp: string;
+    end_timestamp: string | null;
+    peak_equity: number;
+    trough_equity: number;
+    depth_pct: string;
+    duration_days: number;
+    recovery_days: number | null;
+    recovered: boolean;
+    total_days_underwater?: number;
 }
 
 export interface BacktestRun {
     manifest: RunManifest;
     metadata: Metadata;
     performance: Performance;
-    timeseries?: TimelineRow[];
 }
 
 export interface OHLCVBar {
@@ -215,11 +242,6 @@ export interface Signal {
     reason?: string;
 }
 
-export interface EquityPoint {
-    timestamp: Date;
-    equity: number;
-}
-
 export interface Indicator {
     name: string;
     data: Array<{ timestamp: Date; value: number }>;
@@ -228,7 +250,8 @@ export interface Indicator {
 export interface ProcessedBacktestData {
     ohlcv: OHLCVBar[];
     signals: Signal[];
-    equity: EquityPoint[];
+    equity: EquityCurvePoint[];
     indicators: Indicator[];
-    trades: Performance['trades'];
+    trades: Trade[];
+    drawdowns: Drawdown[];
 }

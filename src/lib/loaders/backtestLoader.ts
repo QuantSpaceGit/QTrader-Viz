@@ -7,7 +7,10 @@ import type {
     RunManifest,
     Metadata,
     Performance,
-    TimelineRow,
+    ChartDataRow,
+    Trade,
+    EquityCurvePoint,
+    Drawdown,
     BacktestRun,
 } from '../types/qtrader';
 
@@ -32,7 +35,7 @@ export async function loadBacktestRun(runPath: string): Promise<BacktestRun> {
  * Load run manifest
  */
 export async function loadManifest(runPath: string): Promise<RunManifest> {
-    const response = await fetch(`${runPath}/run_manifest.json`);
+    const response = await fetch(`${runPath}/manifest.json`);
     if (!response.ok) {
         throw new Error(`Failed to load manifest: ${response.statusText}`);
     }
@@ -62,85 +65,47 @@ export async function loadPerformance(runPath: string): Promise<Performance> {
 }
 
 /**
- * Load timeseries CSV data
- * Note: This is a basic CSV parser. For production, consider using Papa Parse or similar
+ * Load trades from JSON file
  */
-export async function loadTimeseries(
-    runPath: string,
-    strategyId: string
-): Promise<TimelineRow[]> {
-    const response = await fetch(
-        `${runPath}/timeseries/timeline_${strategyId}.csv`
-    );
+export async function loadTrades(runPath: string): Promise<Trade[]> {
+    const response = await fetch(`${runPath}/timeseries/trades.json`);
     if (!response.ok) {
-        throw new Error(`Failed to load timeseries: ${response.statusText}`);
+        throw new Error(`Failed to load trades: ${response.statusText}`);
     }
-
-    const csvText = await response.text();
-    return parseTimelineCSV(csvText);
+    return response.json();
 }
 
 /**
- * Parse timeline CSV into typed rows
+ * Load chart data from JSON file
  */
-function parseTimelineCSV(csvText: string): TimelineRow[] {
-    const lines = csvText.trim().split('\n');
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(',');
-    const rows: TimelineRow[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i]);
-        const row: Record<string, string | number | null> = {};
-
-        headers.forEach((header, index) => {
-            const value = values[index]?.trim();
-            row[header] = value === '' ? null : parseValue(value);
-        });
-
-        rows.push(row as unknown as TimelineRow);
+export async function loadChartData(runPath: string): Promise<ChartDataRow[]> {
+    const response = await fetch(`${runPath}/timeseries/chart_data.json`);
+    if (!response.ok) {
+        throw new Error(`Failed to load chart data: ${response.statusText}`);
     }
-
-    return rows;
+    return response.json();
 }
 
 /**
- * Parse a CSV line handling quoted values
+ * Load equity curve from JSON file
  */
-function parseCSVLine(line: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-
-        if (char === '"') {
-            inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-            result.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
+export async function loadEquityCurve(runPath: string): Promise<EquityCurvePoint[]> {
+    const response = await fetch(`${runPath}/timeseries/equity_curve.json`);
+    if (!response.ok) {
+        throw new Error(`Failed to load equity curve: ${response.statusText}`);
     }
-
-    result.push(current);
-    return result;
+    return response.json();
 }
 
 /**
- * Parse a value to appropriate type
+ * Load drawdowns from JSON file
  */
-function parseValue(value: string): string | number {
-    if (value === '') return '';
-
-    // Try parsing as number
-    const num = Number(value);
-    if (!isNaN(num)) return num;
-
-    return value;
+export async function loadDrawdowns(runPath: string): Promise<Drawdown[]> {
+    const response = await fetch(`${runPath}/timeseries/drawdowns.json`);
+    if (!response.ok) {
+        throw new Error(`Failed to load drawdowns: ${response.statusText}`);
+    }
+    return response.json();
 }
 
 /**
