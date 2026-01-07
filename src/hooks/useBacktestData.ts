@@ -7,8 +7,14 @@ import type {
     BacktestRun,
     ProcessedBacktestData,
 } from '../lib/types/qtrader';
-import { loadBacktestRun, loadTimeseries } from '../lib/loaders/backtestLoader';
-import { processTimelineData } from '../lib/processors/dataProcessor';
+import {
+    loadBacktestRun,
+    loadChartData,
+    loadTrades,
+    loadEquityCurve,
+    loadDrawdowns
+} from '../lib/loaders/backtestLoader';
+import { processChartData } from '../lib/processors/dataProcessor';
 
 interface UseBacktestDataOptions {
     runPath: string;
@@ -40,25 +46,20 @@ export function useBacktestData({
         setError(null);
 
         try {
-            // Load manifest, metadata, and performance
-            const backtestRun = await loadBacktestRun(runPath);
+            // Load all data in parallel
+            const [backtestRun, chartData, trades, equityCurve, drawdowns] = await Promise.all([
+                loadBacktestRun(runPath),
+                loadChartData(runPath),
+                loadTrades(runPath),
+                loadEquityCurve(runPath),
+                loadDrawdowns(runPath),
+            ]);
+
             setRun(backtestRun);
 
-            // Get strategy ID from metadata
-            const strategyId =
-                backtestRun.metadata.backtest.strategies[0]?.strategy_id;
-
-            if (strategyId) {
-                // Load timeseries data
-                const timeline = await loadTimeseries(runPath, strategyId);
-
-                // Process data for charts
-                const processed = processTimelineData(
-                    timeline,
-                    backtestRun.performance.trades
-                );
-                setProcessedData(processed);
-            }
+            // Process data for charts
+            const processed = processChartData(chartData, trades, equityCurve, drawdowns);
+            setProcessedData(processed);
         } catch (err) {
             setError(
                 err instanceof Error ? err : new Error('Failed to load backtest data')

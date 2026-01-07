@@ -18,24 +18,9 @@ interface RunSelectorProps {
 // Available runs - in production, this could be fetched from an API
 const AVAILABLE_RUNS: RunInfo[] = [
     {
-        id: '20251224_162255',
-        path: '/data/examples/runs/20251224_162255',
-        displayName: '2025-12-24 16:22:55',
-    },
-    {
-        id: '20251224_162746',
-        path: '/data/examples/runs/20251224_162746',
-        displayName: '2025-12-24 16:27:46',
-    },
-    {
-        id: '20251224_163052',
-        path: '/data/examples/runs/20251224_163052',
-        displayName: '2025-12-24 16:30:52',
-    },
-    {
-        id: '20251224_163247',
-        path: '/data/examples/runs/20251224_163247',
-        displayName: '2025-12-24 16:32:47',
+        id: '20260107_144852',
+        path: '/data/runs/20260107_144852',
+        displayName: '2026-01-07 14:48:52 - Latest',
     },
 ];
 
