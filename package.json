@@ -13,7 +13,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "apache-arrow": "^21.1.0",
     "lightweight-charts": "5.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
